@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Prompt Manager</title>
+<style>
+  :root {
+    --bg: #1a1b1e;
+    --bg2: #212226;
+    --bg3: #2a2b30;
+    --border: #34353b;
+    --text: #e8e8ea;
+    --text2: #9a9ba2;
+    --accent: #7c8cf8;
+    --accent2: #5865f2;
+    --danger: #f0616d;
+    --star: #f5c451;
+    --radius: 10px;
+    --shadow: rgba(0,0,0,.5);
+    --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    --font-mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --fs: 13px;
+  }
+  html[data-theme="light"] {
+    --bg: #f5f6f8;
+    --bg2: #ffffff;
+    --bg3: #eceef2;
+    --border: #d9dce2;
+    --text: #1c1e22;
+    --text2: #6a6e78;
+    --accent: #5865f2;
+    --accent2: #5865f2;
+    --danger: #d9455c;
+    --star: #e0a020;
+    --shadow: rgba(0,0,0,.18);
+  }
+  html[data-font="serif"] { --font-ui: "New York", Georgia, "Times New Roman", serif; }
+  html[data-font="mono"]  { --font-ui: var(--font-mono); }
+  html[data-font="rounded"] { --font-ui: ui-rounded, "SF Pro Rounded", -apple-system, sans-serif; }
+  html[data-fs="small"]  { --fs: 12px; }
+  html[data-fs="medium"] { --fs: 13px; }
+  html[data-fs="large"]  { --fs: 15px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font-ui);
+    font-size: var(--fs);
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; overflow: hidden;
+    user-select: none;
+  }
+  html[data-ratings="off"] .rating { display: none !important; }
+  /* Draggable titlebar area for hiddenInset */
+  .titlebar {
+    height: 38px; flex: 0 0 auto; -webkit-app-region: drag;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text2); font-size: 13px; font-weight: 600;
+    border-bottom: 1px solid var(--border); background: var(--bg2);
+  }
+  .layout { flex: 1; display: flex; min-height: 0; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 200px; flex: 0 0 auto; background: var(--bg2);
+    border-right: 1px solid var(--border); padding: 12px 8px;
+    overflow-y: auto; display: flex; flex-direction: column; gap: 2px;
+  }
+  .side-item {
+    padding: 7px 10px; border-radius: 7px; font-size: var(--fs); cursor: pointer;
+    color: var(--text2); display: flex; justify-content: space-between; align-items: center;
+    gap: 6px;
+  }
+  .side-item .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .side-item .proj-del {
+    opacity: 0; font-size: 13px; color: var(--text2); padding: 0 2px; border-radius: 4px;
+  }
+  .side-item:hover .proj-del { opacity: .8; }
+  .side-item .proj-del:hover { color: var(--danger); }
+  .side-item:hover { background: var(--bg3); color: var(--text); }
+  .side-item.active { background: var(--accent2); color: #fff; }
+  .side-item .count { font-size: 11px; opacity: .7; }
+  .side-label {
+    margin: 12px 10px 4px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text2);
+  }
+
+  /* Middle: list */
+  .listpane {
+    width: 320px; flex: 0 0 auto; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .searchbar { padding: 10px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+  .searchbar input {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-size: 13px; outline: none;
+  }
+  .searchbar input:focus { border-color: var(--accent); }
+  .btn {
+    background: var(--accent2); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { background: var(--accent); }
+  .btn.ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  .btn.ghost:hover { border-color: var(--accent); }
+  .btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--border); }
+  .btn.danger:hover { border-color: var(--danger); }
+
+  .list { flex: 1; overflow-y: auto; padding: 6px; }
+  .card {
+    padding: 10px 12px; border-radius: var(--radius); cursor: pointer;
+    border: 1px solid transparent; margin-bottom: 4px;
+  }
+  .card:hover { background: var(--bg2); }
+  .card.active { background: var(--bg3); border-color: var(--border); }
+  .card .t { font-size: calc(var(--fs) + 0.5px); font-weight: 600; display: flex; gap: 6px; align-items: center; }
+  .card .t .star { color: var(--star); font-size: 12px; }
+  .card .preview {
+    font-size: calc(var(--fs) - 1px); color: var(--text2); margin-top: 3px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card .meta { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .tagchip {
+    font-size: 10.5px; background: var(--bg3); color: var(--text2);
+    border-radius: 20px; padding: 2px 8px;
+  }
+  .rating { margin-top: 6px; display: flex; align-items: center; gap: 1px; }
+  .rating .s {
+    font-size: 12px; line-height: 1; cursor: pointer; color: var(--border);
+    padding: 1px; transition: color .08s, transform .08s;
+  }
+  .rating .s.on { color: var(--star); }
+  .rating .s.hl { color: var(--star); transform: scale(1.12); }
+  .rating .num {
+    font-size: 10.5px; color: var(--text2); margin-left: 6px; min-width: 26px;
+  }
+  .empty { text-align: center; color: var(--text2); font-size: 13px; padding: 40px 20px; }
+
+  /* Right: detail / editor */
+  .detail { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .detail-head {
+    padding: 14px 18px 10px; display: flex; gap: 10px; align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-head input#title {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 18px; font-weight: 700;
+  }
+  .iconbtn {
+    background: transparent; border: none; cursor: pointer; font-size: 17px;
+    color: var(--text2); padding: 4px 6px; border-radius: 6px;
+  }
+  .iconbtn:hover { background: var(--bg3); }
+  .iconbtn.fav { color: var(--star); }
+  .detail-body { flex: 1; display: flex; flex-direction: column; padding: 14px 18px; gap: 10px; min-height: 0; }
+  textarea#content {
+    flex: 1; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); font-family: var(--font-mono); font-size: var(--fs); line-height: 1.55;
+    padding: 14px; resize: none; outline: none; user-select: text;
+  }
+  textarea#content:focus { border-color: var(--accent); }
+  .rowline { display: flex; gap: 8px; align-items: center; }
+  input#tags {
+    flex: 1; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-size: 13px; outline: none;
+  }
+  .varsline { font-size: 12px; color: var(--text2); min-height: 16px; }
+  .varsline .v { color: var(--accent); font-family: ui-monospace, monospace; }
+  .footerbar {
+    display: flex; gap: 8px; align-items: center; padding-top: 2px;
+  }
+  .spacer { flex: 1; }
+  .hint { font-size: 11.5px; color: var(--text2); }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--accent2); color: #fff; padding: 9px 18px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; transition: transform .25s ease; z-index: 50;
+    box-shadow: 0 6px 24px rgba(0,0,0,.4);
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Variable modal */
+  .modal-back {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none;
+    align-items: center; justify-content: center; z-index: 40;
+  }
+  .modal-back.show { display: flex; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+    width: 460px; max-height: 70vh; overflow-y: auto; padding: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .modal h3 { font-size: 15px; margin-bottom: 14px; }
+  .modal .field { margin-bottom: 12px; }
+  .modal label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; font-family: ui-monospace, monospace; }
+  .modal input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-size: 13px; outline: none;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal.wide { width: 420px; }
+
+  /* Project assignment chips (detail pane) */
+  .projrow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .projrow .plabel { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-right: 2px; }
+  .projchip {
+    font-size: 11.5px; padding: 3px 10px; border-radius: 20px; cursor: pointer;
+    background: var(--bg2); color: var(--text2); border: 1px solid var(--border);
+  }
+  .projchip:hover { border-color: var(--accent); color: var(--text); }
+  .projchip.on { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .projchip.add { border-style: dashed; }
+
+  /* Settings rows */
+  .setrow { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .setrow:last-child { border-bottom: none; }
+  .setrow .k { font-size: 13px; color: var(--text); }
+  .setrow .k small { display: block; font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .seg { display: flex; background: var(--bg3); border-radius: 8px; padding: 2px; gap: 2px; }
+  .seg button {
+    background: transparent; border: none; color: var(--text2); cursor: pointer;
+    font-size: 12px; padding: 5px 10px; border-radius: 6px; font-family: inherit; white-space: nowrap;
+  }
+  .seg button.on { background: var(--accent2); color: #fff; }
+  .toggle { width: 40px; height: 23px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border); position: relative; cursor: pointer; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border-radius: 50%; background: var(--text2); transition: .15s; }
+  .toggle.on { background: var(--accent2); border-color: var(--accent2); }
+  .toggle.on::after { left: 19px; background: #fff; }
+  .setrow.col { flex-direction: column; align-items: stretch; gap: 9px; }
+  .agentbtns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .agentbtns .btn { flex: 1; min-width: 130px; font-size: 12px; padding: 8px 10px; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 4px; }
+</style>
+</head>
+<body>
+  <div class="titlebar">Prompt Manager</div>
+  <div class="layout">
+    <div class="sidebar" id="sidebar">
+      <div class="side-item" data-filter="all"><span class="lbl" data-i18n="all">All Prompts</span> <span class="count" id="countAll"></span></div>
+      <div class="side-item" data-filter="favorites"><span class="lbl" data-i18n="favorites">★ Favorites</span> <span class="count" id="countFav"></span></div>
+
+      <div class="side-label" data-i18n="projects">Projects</div>
+      <div id="projectList"></div>
+      <div class="side-item" id="newProjectBtn"><span class="lbl" data-i18n="newProject">＋ New project</span></div>
+
+      <div class="side-label" data-i18n="tags">Tags</div>
+      <div id="tagList"></div>
+
+      <div style="flex:1"></div>
+      <div class="side-item" id="settingsBtn"><span class="lbl" data-i18n="settings">⚙ Settings</span></div>
+    </div>
+
+    <div class="listpane">
+      <div class="searchbar">
+        <input id="search" type="text" placeholder="Search prompts…" />
+        <button class="btn" id="newBtn">＋ New</button>
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+
+    <div class="detail" id="detail">
+      <div class="detail-head">
+        <button class="iconbtn" id="favBtn" title="Toggle favorite">☆</button>
+        <input id="title" placeholder="Prompt title" />
+        <button class="btn ghost" id="copyBtn" title="Copy to clipboard">⧉ Copy</button>
+      </div>
+      <div class="detail-body">
+        <textarea id="content" placeholder="Write your prompt here… Use {{variable}} for placeholders."></textarea>
+        <div class="varsline" id="varsline"></div>
+        <div class="rowline">
+          <input id="tags" placeholder="Tags, comma separated (e.g. claude, coding)" />
+        </div>
+        <div class="projrow" id="projRow"></div>
+        <div class="footerbar">
+          <button class="btn" id="saveBtn">Save</button>
+          <button class="btn danger" id="deleteBtn">Delete</button>
+          <div class="spacer"></div>
+          <div class="hint" id="pathHint"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast">Copied!</div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <h3 id="modalTitle">Fill in variables</h3>
+      <div id="varFields"></div>
+      <div class="actions">
+        <button class="btn ghost" id="varCancel">Cancel</button>
+        <button class="btn" id="varCopy">Copy result</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="settingsBack">
+    <div class="modal wide">
+      <h3 id="setTitle">Settings</h3>
+
+      <div class="setrow">
+        <div class="k" id="setLangK">Language</div>
+        <div class="seg" id="setLang">
+          <button data-v="en">EN</button>
+          <button data-v="ru">RU</button>
+        </div>
+      </div>
+
+      <div class="setrow">
+        <div class="k" id="setThemeK">Theme</div>
+        <div class="seg" id="setTheme">
+          <button data-v="dark" id="setThemeDark">Dark</button>
+          <button data-v="light" id="setThemeLight">Light</button>
+        </div>
+      </div>
+
+      <div class="setrow">
+        <div class="k" id="setRatingsK">Ratings<small id="setRatingsSub">Show 1–10 stars on cards</small></div>
+        <div class="toggle" id="setRatings"></div>
+      </div>
+
+      <div class="setrow">
+        <div class="k" id="setFontK">Font</div>
+        <div class="seg" id="setFont">
+          <button data-v="system" id="setFontSystem">System</button>
+          <button data-v="serif" id="setFontSerif">Serif</button>
+          <button data-v="mono" id="setFontMono">Mono</button>
+          <button data-v="rounded" id="setFontRounded">Rounded</button>
+        </div>
+      </div>
+
+      <div class="setrow">
+        <div class="k" id="setSizeK">Font size</div>
+        <div class="seg" id="setSize">
+          <button data-v="small" id="setSizeSmall">S</button>
+          <button data-v="medium" id="setSizeMedium">M</button>
+          <button data-v="large" id="setSizeLarge">L</button>
+        </div>
+      </div>
+
+      <div class="setrow col">
+        <div class="k" id="setAgentK">For agents (MCP)<small id="setAgentSub">Let an AI agent search and use these prompts</small></div>
+        <div class="agentbtns">
+          <button class="btn ghost" id="copyMcpConfig">Claude Desktop config</button>
+          <button class="btn ghost" id="copyMcpCmd">Claude Code command</button>
+          <button class="btn ghost" id="copyAgentInstr">Agent instruction</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="setClose">Done</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+const I18N = {
+  en: {
+    all: "All Prompts", favorites: "★ Favorites", tags: "Tags",
+    projects: "Projects", newProject: "＋ New project", settings: "⚙ Settings",
+    searchPh: "Search prompts…", newBtn: "＋ New", copyBtn: "⧉ Copy",
+    save: "Save", del: "Delete", titlePh: "Prompt title",
+    contentPh: "Write your prompt here… Use {{variable}} for placeholders.",
+    tagsPh: "Tags, comma separated (e.g. claude, coding)",
+    varsLabel: "Variables:", fillVars: "Fill in variables",
+    cancel: "Cancel", copyResult: "Copy result",
+    copied: "Copied!", copiedVars: "Copied with variables!", saved: "Saved",
+    required: "Title and content required", confirmDel: "Delete this prompt?",
+    empty: "No prompts found.<br>Click <b>＋ New</b> to create one.",
+    projLabel: "Projects:", addToProj: "＋ Project", newProjPrompt: "New project name:",
+    confirmDelProj: "Delete this project? Prompts stay, only the grouping is removed.",
+    saveFirst: "Save the prompt first to assign it to a project.",
+    setTitle: "Settings", language: "Language", theme: "Theme",
+    ratingsK: "Ratings", ratingsSub: "Show 1–10 stars on cards",
+    font: "Font", fontSize: "Font size",
+    dark: "Dark", light: "Light", done: "Done",
+    fSystem: "System", fSerif: "Serif", fMono: "Mono", fRounded: "Rounded",
+    agentK: "For agents (MCP)", agentSub: "Let an AI agent search and use these prompts",
+    cfgBtn: "Claude Desktop config", cmdBtn: "Claude Code command", instrBtn: "Agent instruction",
+    cfgCopied: "Config copied — paste into claude_desktop_config.json",
+    cmdCopied: "Command copied — run it in Terminal",
+    instrCopied: "Instruction copied — paste into the agent's system prompt / CLAUDE.md",
+  },
+  ru: {
+    all: "Все промпты", favorites: "★ Избранное", tags: "Теги",
+    projects: "Проекты", newProject: "＋ Новый проект", settings: "⚙ Настройки",
+    searchPh: "Поиск промптов…", newBtn: "＋ Новый", copyBtn: "⧉ Копировать",
+    save: "Сохранить", del: "Удалить", titlePh: "Название промпта",
+    contentPh: "Напиши промпт здесь… Используй {{переменная}} для плейсхолдеров.",
+    tagsPh: "Теги через запятую (напр. claude, кодинг)",
+    varsLabel: "Переменные:", fillVars: "Заполни переменные",
+    cancel: "Отмена", copyResult: "Скопировать результат",
+    copied: "Скопировано!", copiedVars: "Скопировано с переменными!", saved: "Сохранено",
+    required: "Нужны название и текст", confirmDel: "Удалить этот промпт?",
+    empty: "Промпты не найдены.<br>Нажми <b>＋ Новый</b>, чтобы создать.",
+    projLabel: "Проекты:", addToProj: "＋ Проект", newProjPrompt: "Название нового проекта:",
+    confirmDelProj: "Удалить проект? Промпты останутся, убирается только группировка.",
+    saveFirst: "Сначала сохрани промпт, чтобы добавить его в проект.",
+    setTitle: "Настройки", language: "Язык", theme: "Тема",
+    ratingsK: "Оценки", ratingsSub: "Показывать 1–10 звёзд на карточках",
+    font: "Шрифт", fontSize: "Размер шрифта",
+    dark: "Тёмная", light: "Светлая", done: "Готово",
+    fSystem: "Системный", fSerif: "С засечками", fMono: "Моно", fRounded: "Округлый",
+    agentK: "Для агентов (MCP)", agentSub: "Дай ИИ-агенту искать и использовать эти промпты",
+    cfgBtn: "Конфиг Claude Desktop", cmdBtn: "Команда Claude Code", instrBtn: "Инструкция агенту",
+    cfgCopied: "Конфиг скопирован — вставь в claude_desktop_config.json",
+    cmdCopied: "Команда скопирована — выполни в Терминале",
+    instrCopied: "Инструкция скопирована — вставь в системный промпт агента / CLAUDE.md",
+  },
+};
+let lang = "en";
+const t = (k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
+
+function applyLang() {
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
+  $("search").placeholder = t("searchPh");
+  $("newBtn").textContent = t("newBtn");
+  $("copyBtn").textContent = t("copyBtn");
+  $("saveBtn").textContent = t("save");
+  $("deleteBtn").textContent = t("del");
+  $("title").placeholder = t("titlePh");
+  $("content").placeholder = t("contentPh");
+  $("tags").placeholder = t("tagsPh");
+  $("modalTitle").textContent = t("fillVars");
+  $("varCancel").textContent = t("cancel");
+  $("varCopy").textContent = t("copyResult");
+  // settings modal labels
+  $("setTitle").textContent = t("setTitle");
+  $("setLangK").textContent = t("language");
+  $("setThemeK").textContent = t("theme");
+  $("setThemeDark").textContent = t("dark");
+  $("setThemeLight").textContent = t("light");
+  $("setRatingsK").innerHTML = t("ratingsK") + `<small>${t("ratingsSub")}</small>`;
+  $("setFontK").textContent = t("font");
+  $("setSizeK").textContent = t("fontSize");
+  $("setAgentK").innerHTML = t("agentK") + `<small>${t("agentSub")}</small>`;
+  $("copyMcpConfig").textContent = t("cfgBtn");
+  $("copyMcpCmd").textContent = t("cmdBtn");
+  $("copyAgentInstr").textContent = t("instrBtn");
+  $("setFontSystem").textContent = t("fSystem");
+  $("setFontSerif").textContent = t("fSerif");
+  $("setFontMono").textContent = t("fMono");
+  $("setFontRounded").textContent = t("fRounded");
+  $("setClose").textContent = t("done");
+  renderProjRow();
+}
+
+let prompts = [];
+let projects = [];
+let settings = { language: "en", showRatings: true, theme: "dark", fontFamily: "system", fontSize: "medium" };
+let filter = { kind: "all", tag: null, projectId: null };
+let selectedId = null;
+let dirty = false;
+
+function applySettings() {
+  const root = document.documentElement;
+  root.setAttribute("data-theme", settings.theme || "dark");
+  root.setAttribute("data-font", settings.fontFamily || "system");
+  root.setAttribute("data-fs", settings.fontSize || "medium");
+  root.setAttribute("data-ratings", settings.showRatings ? "on" : "off");
+}
+
+function extractVariables(content) {
+  const re = /\{\{\s*([^{}\n]+?)\s*\}\}/g;
+  const vars = []; let m;
+  while ((m = re.exec(content || "")) !== null) if (!vars.includes(m[1])) vars.push(m[1]);
+  return vars;
+}
+function renderTemplate(content, values) {
+  return content.replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g,
+    (f, n) => (n in values ? values[n] : f));
+}
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1400);
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+}
+
+async function refresh() {
+  [prompts, projects] = await Promise.all([
+    window.api.listPrompts(),
+    window.api.listProjects(),
+  ]);
+  renderSidebar();
+  renderList();
+  renderProjRow();
+  if (selectedId && !prompts.find(p => p.id === selectedId)) selectPrompt(null);
+}
+
+function visiblePrompts() {
+  const q = $("search").value.toLowerCase().trim();
+  return prompts.filter(p => {
+    if (filter.kind === "favorites" && !p.favorite) return false;
+    if (filter.kind === "tag" && !(p.tags || []).includes(filter.tag)) return false;
+    if (filter.kind === "project" && !(p.projectIds || []).includes(filter.projectId)) return false;
+    if (!q) return true;
+    const hay = (p.title + "\n" + p.content + "\n" + (p.tags||[]).join(" ")).toLowerCase();
+    return q.split(/\s+/).every(w => hay.includes(w));
+  });
+}
+
+function renderSidebar() {
+  $("countAll").textContent = prompts.length;
+  $("countFav").textContent = prompts.filter(p => p.favorite).length;
+  // Projects
+  $("projectList").innerHTML = projects.map(pr =>
+    `<div class="side-item ${filter.kind==='project'&&filter.projectId===pr.id?'active':''}" data-filter="project" data-project="${esc(pr.id)}">
+       <span class="lbl">${esc(pr.name)}</span>
+       <span class="count">${pr.count}</span>
+       <span class="proj-del" data-delproject="${esc(pr.id)}" title="Delete project">✕</span>
+     </div>`
+  ).join("");
+  // Tags
+  const counts = {};
+  prompts.forEach(p => (p.tags || []).forEach(t => counts[t] = (counts[t]||0)+1));
+  const tags = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  $("tagList").innerHTML = tags.map(([t,c]) =>
+    `<div class="side-item ${filter.kind==='tag'&&filter.tag===t?'active':''}" data-filter="tag" data-tag="${esc(t)}"><span class="lbl">${esc(t)}</span> <span class="count">${c}</span></div>`
+  ).join("");
+  document.querySelectorAll('.side-item[data-filter="all"],[data-filter="favorites"]').forEach(el => {
+    el.classList.toggle("active", filter.kind === el.dataset.filter);
+  });
+}
+
+function renderProjRow() {
+  const row = $("projRow");
+  const p = prompts.find(x => x.id === selectedId);
+  if (!p || !selectedId) { row.innerHTML = ""; return; }
+  const assigned = new Set(p.projectIds || []);
+  let html = `<span class="plabel">${t("projLabel")}</span>`;
+  html += projects.map(pr =>
+    `<span class="projchip ${assigned.has(pr.id)?'on':''}" data-toggleproject="${esc(pr.id)}">${esc(pr.name)}</span>`
+  ).join("");
+  html += `<span class="projchip add" id="projAddChip">${t("addToProj")}</span>`;
+  row.innerHTML = html;
+}
+
+function renderList() {
+  const vis = visiblePrompts();
+  if (!vis.length) {
+    $("list").innerHTML = `<div class="empty">${t("empty")}</div>`;
+    return;
+  }
+  $("list").innerHTML = vis.map(p => `
+    <div class="card ${p.id===selectedId?'active':''}" data-id="${p.id}">
+      <div class="t">${p.favorite ? '<span class="star">★</span>' : ''}${esc(p.title)}</div>
+      <div class="preview">${esc(p.content)}</div>
+      <div class="meta">${(p.tags||[]).map(t=>`<span class="tagchip">${esc(t)}</span>`).join("")}</div>
+      ${ratingHtml(p)}
+    </div>`).join("");
+}
+
+function ratingHtml(p) {
+  const r = p.rating || 0;
+  let stars = "";
+  for (let i = 1; i <= 10; i++) {
+    stars += `<span class="s ${i<=r?'on':''}" data-star="${i}">★</span>`;
+  }
+  return `<div class="rating" data-id="${p.id}" title="Оценка / Rating">${stars}<span class="num">${r?`${r}/10`:""}</span></div>`;
+}
+
+function selectPrompt(id) {
+  selectedId = id;
+  dirty = false;
+  const p = prompts.find(x => x.id === id);
+  $("title").value = p ? p.title : "";
+  $("content").value = p ? p.content : "";
+  $("tags").value = p ? (p.tags||[]).join(", ") : "";
+  $("favBtn").textContent = p && p.favorite ? "★" : "☆";
+  $("favBtn").classList.toggle("fav", !!(p && p.favorite));
+  updateVarsLine();
+  renderProjRow();
+  renderList();
+}
+
+function updateVarsLine() {
+  const vars = extractVariables($("content").value);
+  $("varsline").innerHTML = vars.length
+    ? t("varsLabel") + " " + vars.map(v => `<span class="v">{{${esc(v)}}}</span>`).join(" ")
+    : "";
+}
+
+function parseTags() {
+  return $("tags").value.split(",").map(s => s.trim()).filter(Boolean);
+}
+
+async function saveCurrent() {
+  const title = $("title").value.trim();
+  const content = $("content").value;
+  if (!title || !content.trim()) { toast(t("required")); return; }
+  const data = { title, content, tags: parseTags() };
+  if (selectedId && prompts.find(p => p.id === selectedId)) {
+    await window.api.updatePrompt(selectedId, data);
+  } else {
+    const p = await window.api.addPrompt(data);
+    selectedId = p.id;
+  }
+  dirty = false;
+  toast(t("saved"));
+  await refresh();
+  selectPrompt(selectedId);
+}
+
+function copyWithVariables(content, promptId) {
+  const vars = extractVariables(content);
+  if (!vars.length) {
+    window.api.copyText(content, promptId);
+    toast(t("copied"));
+    return;
+  }
+  $("varFields").innerHTML = vars.map((v,i) => `
+    <div class="field">
+      <label>{{${esc(v)}}}</label>
+      <input data-var="${esc(v)}" ${i===0?'autofocus':''} />
+    </div>`).join("");
+  $("modalBack").classList.add("show");
+  $("modalBack")._content = content;
+  $("modalBack")._promptId = promptId;
+  setTimeout(() => { const f = $("varFields").querySelector("input"); if (f) f.focus(); }, 50);
+}
+
+// ---------- events ----------
+$("sidebar").addEventListener("click", async e => {
+  // delete project (✕)
+  const del = e.target.closest("[data-delproject]");
+  if (del) {
+    e.stopPropagation();
+    if (!confirm(t("confirmDelProj"))) return;
+    const id = del.dataset.delproject;
+    await window.api.deleteProject(id);
+    if (filter.kind === "project" && filter.projectId === id) filter = { kind: "all", tag: null, projectId: null };
+    await refresh();
+    return;
+  }
+  const el = e.target.closest(".side-item"); if (!el || !el.dataset.filter) return;
+  if (el.dataset.filter === "tag") filter = { kind: "tag", tag: el.dataset.tag, projectId: null };
+  else if (el.dataset.filter === "project") filter = { kind: "project", tag: null, projectId: el.dataset.project };
+  else filter = { kind: el.dataset.filter, tag: null, projectId: null };
+  renderSidebar(); renderList();
+});
+$("newProjectBtn").addEventListener("click", async () => {
+  const name = prompt(t("newProjPrompt"));
+  if (!name || !name.trim()) return;
+  const pr = await window.api.addProject(name.trim());
+  filter = { kind: "project", tag: null, projectId: pr.id };
+  await refresh();
+});
+// assign/unassign current prompt to a project via chips
+$("projRow").addEventListener("click", async e => {
+  const add = e.target.closest("#projAddChip");
+  if (add) {
+    if (!selectedId || !prompts.find(p => p.id === selectedId)) { toast(t("saveFirst")); return; }
+    const name = prompt(t("newProjPrompt"));
+    if (!name || !name.trim()) return;
+    const pr = await window.api.addProject(name.trim());
+    const p = prompts.find(x => x.id === selectedId);
+    const ids = [...(p.projectIds || []), pr.id];
+    await window.api.updatePrompt(selectedId, { projectIds: ids });
+    await refresh();
+    return;
+  }
+  const chip = e.target.closest("[data-toggleproject]");
+  if (!chip) return;
+  if (!selectedId || !prompts.find(p => p.id === selectedId)) { toast(t("saveFirst")); return; }
+  const pid = chip.dataset.toggleproject;
+  const p = prompts.find(x => x.id === selectedId);
+  const cur = new Set(p.projectIds || []);
+  cur.has(pid) ? cur.delete(pid) : cur.add(pid);
+  const ids = [...cur];
+  await window.api.updatePrompt(selectedId, { projectIds: ids });
+  p.projectIds = ids;
+  renderProjRow();
+  renderSidebar();
+});
+$("list").addEventListener("click", async e => {
+  const star = e.target.closest(".rating .s");
+  if (star) {
+    e.stopPropagation();
+    const rateEl = star.closest(".rating");
+    const id = rateEl.dataset.id;
+    const val = Number(star.dataset.star);
+    const p = prompts.find(x => x.id === id);
+    const newRating = (p && p.rating === val) ? 0 : val; // click same value clears
+    await window.api.updatePrompt(id, { rating: newRating });
+    if (p) p.rating = newRating;
+    // update just this widget without losing selection/scroll
+    rateEl.querySelectorAll(".s").forEach(s => {
+      s.classList.toggle("on", Number(s.dataset.star) <= newRating);
+      s.classList.remove("hl");
+    });
+    rateEl.querySelector(".num").textContent = newRating ? `${newRating}/10` : "";
+    return;
+  }
+  const card = e.target.closest(".card"); if (!card) return;
+  selectPrompt(card.dataset.id);
+});
+// hover preview of rating
+$("list").addEventListener("mouseover", e => {
+  const star = e.target.closest(".rating .s"); if (!star) return;
+  const val = Number(star.dataset.star);
+  star.closest(".rating").querySelectorAll(".s").forEach(s =>
+    s.classList.toggle("hl", Number(s.dataset.star) <= val));
+});
+$("list").addEventListener("mouseout", e => {
+  const rateEl = e.target.closest(".rating"); if (!rateEl) return;
+  rateEl.querySelectorAll(".s").forEach(s => s.classList.remove("hl"));
+});
+$("search").addEventListener("input", renderList);
+$("newBtn").addEventListener("click", () => {
+  selectPrompt(null);
+  $("title").focus();
+});
+$("content").addEventListener("input", () => { dirty = true; updateVarsLine(); });
+$("title").addEventListener("input", () => dirty = true);
+$("tags").addEventListener("input", () => dirty = true);
+$("saveBtn").addEventListener("click", saveCurrent);
+$("deleteBtn").addEventListener("click", async () => {
+  if (!selectedId) return;
+  if (!confirm(t("confirmDel"))) return;
+  await window.api.deletePrompt(selectedId);
+  selectPrompt(null);
+  await refresh();
+});
+$("favBtn").addEventListener("click", async () => {
+  if (!selectedId) return;
+  const p = prompts.find(x => x.id === selectedId); if (!p) return;
+  await window.api.updatePrompt(p.id, { favorite: !p.favorite });
+  await refresh();
+  selectPrompt(p.id);
+});
+$("copyBtn").addEventListener("click", () => {
+  const content = $("content").value;
+  if (!content.trim()) return;
+  copyWithVariables(content, selectedId);
+});
+$("varCancel").addEventListener("click", () => $("modalBack").classList.remove("show"));
+$("varCopy").addEventListener("click", () => {
+  const values = {};
+  $("varFields").querySelectorAll("input").forEach(i => values[i.dataset.var] = i.value);
+  const result = renderTemplate($("modalBack")._content, values);
+  window.api.copyText(result, $("modalBack")._promptId);
+  $("modalBack").classList.remove("show");
+  toast(t("copiedVars"));
+});
+$("modalBack").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("varCopy").click();
+  if (e.key === "Escape") $("varCancel").click();
+});
+
+// ---------- settings ----------
+function renderSettingsState() {
+  const mark = (groupId, val) =>
+    document.querySelectorAll(`#${groupId} button`).forEach(b =>
+      b.classList.toggle("on", b.dataset.v === val));
+  mark("setLang", settings.language);
+  mark("setTheme", settings.theme);
+  mark("setFont", settings.fontFamily);
+  mark("setSize", settings.fontSize);
+  $("setRatings").classList.toggle("on", !!settings.showRatings);
+}
+async function updateSettings(patch) {
+  settings = await window.api.setSettings(patch);
+  applySettings();
+  if (patch.language) { lang = settings.language; applyLang(); }
+  renderSettingsState();
+  renderSidebar();
+  renderList();
+}
+function openSettings() { renderSettingsState(); $("settingsBack").classList.add("show"); }
+function closeSettings() { $("settingsBack").classList.remove("show"); }
+$("settingsBtn").addEventListener("click", openSettings);
+$("setClose").addEventListener("click", closeSettings);
+$("settingsBack").addEventListener("click", e => { if (e.target === $("settingsBack")) closeSettings(); });
+["setLang","setTheme","setFont","setSize"].forEach(gid => {
+  const keyMap = { setLang:"language", setTheme:"theme", setFont:"fontFamily", setSize:"fontSize" };
+  $(gid).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    updateSettings({ [keyMap[gid]]: b.dataset.v });
+  });
+});
+$("setRatings").addEventListener("click", () => updateSettings({ showRatings: !settings.showRatings }));
+
+// ---------- agent / MCP snippets ----------
+let mcpServerPath = "/path/to/prompt_manager/mcp-server/server.js";
+window.api.mcpPath().then(p => { if (p) mcpServerPath = p; });
+
+function agentInstruction() {
+  return lang === "ru"
+    ? `У тебя есть доступ к личной библиотеке промптов пользователя через MCP-сервер «prompt-manager». Инструменты: list_projects, list_tags, search_prompts, get_prompt, render_prompt, add_prompt, update_prompt.
+
+Правило: прежде чем писать сложный промпт или начинать задачу, сначала вызови search_prompts (при необходимости с projectId из list_projects), чтобы найти подходящий сохранённый промпт пользователя. Если нашёл хорошее совпадение — используй get_prompt или render_prompt (подставляет {{переменные}}) вместо написания с нуля. Если пользователь придумал удачный новый промпт — предложи сохранить его через add_prompt.`
+    : `You have access to the user's personal prompt library via the "prompt-manager" MCP server. Tools: list_projects, list_tags, search_prompts, get_prompt, render_prompt, add_prompt, update_prompt.
+
+Rule: before writing a complex prompt or starting a task, first call search_prompts (optionally with a projectId from list_projects) to find a relevant saved prompt. If there's a good match, use get_prompt or render_prompt (fills {{variables}}) instead of writing from scratch. When the user lands on a good new prompt, offer to save it with add_prompt.`;
+}
+function mcpConfigJson() {
+  return JSON.stringify({
+    mcpServers: { "prompt-manager": { command: "node", args: [mcpServerPath] } },
+  }, null, 2);
+}
+$("copyMcpConfig").addEventListener("click", () => {
+  window.api.copyText(mcpConfigJson());
+  toast(t("cfgCopied"));
+});
+$("copyMcpCmd").addEventListener("click", () => {
+  window.api.copyText(`claude mcp add prompt-manager -- node "${mcpServerPath}"`);
+  toast(t("cmdCopied"));
+});
+$("copyAgentInstr").addEventListener("click", () => {
+  window.api.copyText(agentInstruction());
+  toast(t("instrCopied"));
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && $("settingsBack").classList.contains("show")) { closeSettings(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveCurrent(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === "f") { e.preventDefault(); $("search").focus(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === "n") { e.preventDefault(); $("newBtn").click(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === ",") { e.preventDefault(); openSettings(); }
+});
+
+window.api.onRefresh(async () => {
+  settings = await window.api.getSettings();
+  applySettings();
+  if (settings.language !== lang) { lang = settings.language; applyLang(); }
+  refresh();
+});
+window.api.dataFile().then(f => $("pathHint").textContent = f);
+window.api.getSettings().then(s => {
+  settings = s;
+  lang = s.language || "en";
+  applySettings();
+  applyLang();
+  return refresh();
+}).then(() => {
+  const first = visiblePrompts()[0];
+  if (first) selectPrompt(first.id);
+});
+</script>
+</body>
+</html>

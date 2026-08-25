@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "prompts": [
+    {
+      "id": "a1f2c3d4e5f60001",
+      "title": "Code review",
+      "content": "Review the following code for correctness, readability, and maintainability. Point out bugs, edge cases, and security issues first, then style. For each finding give the line, the problem, and a concrete fix. Do not praise; if the code is fine, say so in one line.\n\n```{{language}}\n{{code}}\n```",
+      "tags": ["coding", "review"],
+      "favorite": true,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f60002",
+      "title": "Explain code",
+      "content": "Explain what this code does, step by step, for a developer unfamiliar with the codebase. Start with a one-paragraph summary, then walk through the important parts. Call out any non-obvious behavior, side effects, or gotchas.\n\n```\n{{code}}\n```",
+      "tags": ["coding", "learning"],
+      "favorite": false,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f60003",
+      "title": "Debug an error",
+      "content": "I'm hitting this error:\n\n```\n{{error}}\n```\n\nContext: {{context}}\n\nDiagnose the most likely root cause before proposing fixes. List the top 2-3 hypotheses ranked by likelihood, how to verify each one, and the fix for the most likely cause.",
+      "tags": ["coding", "debugging"],
+      "favorite": true,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f60004",
+      "title": "Write unit tests",
+      "content": "Write unit tests for the following code using {{framework}}. Cover the happy path, edge cases (empty input, boundary values, invalid input), and error handling. Use descriptive test names that state the expected behavior. Follow the Arrange-Act-Assert pattern.\n\n```\n{{code}}\n```",
+      "tags": ["coding", "testing"],
+      "favorite": false,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f60005",
+      "title": "Refactor for readability",
+      "content": "Refactor this code for readability without changing its behavior. Prefer early returns over nesting, clear names over comments, and small functions over large ones. Show the refactored code, then list the changes you made and why.\n\n```\n{{code}}\n```",
+      "tags": ["coding", "refactoring"],
+      "favorite": false,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f60006",
+      "title": "Commit message",
+      "content": "Write a commit message for this diff using Conventional Commits (feat/fix/refactor/docs/test/chore). Subject line under 50 characters, imperative mood. Add a body only if the \"why\" isn't obvious from the subject.\n\n```diff\n{{diff}}\n```",
+      "tags": ["coding", "git"],
+      "favorite": false,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f60007",
+      "title": "API design review",
+      "content": "Review this API design: {{description}}\n\nEvaluate: naming consistency, REST/RPC conventions, error handling and status codes, pagination, versioning, backwards compatibility, and security (auth, rate limiting, input validation). Suggest concrete improvements with example requests/responses.",
+      "tags": ["coding", "architecture"],
+      "favorite": false,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f60008",
+      "title": "Technical doc from notes",
+      "content": "Turn these rough notes into a clear technical document with a short summary at the top, logical sections, and concrete examples. Keep the author's technical decisions intact; flag anything ambiguous as an open question instead of guessing.\n\nNotes:\n{{notes}}",
+      "tags": ["writing", "docs"],
+      "favorite": false,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f60009",
+      "title": "Honest expert (no flattery)",
+      "content": "Act as a blunt, world-class expert in {{field}}. No flattery, no hedging, no \"great question\". If my idea is weak, say so and explain exactly why. Rank alternatives, state your confidence, and separate facts from opinion. If you don't know, say \"I don't know\".\n\nMy question: {{question}}",
+      "tags": ["thinking"],
+      "favorite": true,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "a1f2c3d4e5f6000a",
+      "title": "Summarize a long text",
+      "content": "Summarize the following text. Start with the single most important takeaway in one sentence, then 3-7 bullet points of key facts, then a short paragraph of context. Preserve concrete numbers, names, and dates. Do not add information that isn't in the source.\n\n{{text}}",
+      "tags": ["writing"],
+      "favorite": false,
+      "usageCount": 0,
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    }
+  ]
+}

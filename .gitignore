@@ -1,0 +1,12 @@
+# Dependencies & build output
+node_modules/
+dist/
+
+# Personal prompt library (not part of the public repo)
+seed-personal/
+
+# Local planning / scratch
+.plan.md
+
+# OS noise
+.DS_Store
