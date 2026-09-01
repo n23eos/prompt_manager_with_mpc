@@ -179,7 +179,7 @@ function getPrompt(idOrTitle) {
   return (
     db.prompts.find((p) => p.id === idOrTitle) ||
     db.prompts.find(
-      (p) => p.title.toLowerCase() === String(idOrTitle).toLowerCase()
+      (p) => String(p.title || "").toLowerCase() === String(idOrTitle).toLowerCase()
     ) ||
     null
   );

@@ -31,6 +31,18 @@ test("addPrompt / getPrompt roundtrip", () => {
   assert.equal(store.getPrompt("test prompt").id, p.id);
 });
 
+test("getPrompt survives a hand-edited entry without a title", () => {
+  resetDb();
+  const p = store.addPrompt({ title: "Real one", content: "C" });
+  // ~/.prompt-manager/prompts.json is meant to be editable by hand, so an
+  // entry may be missing a field. One such entry must not break every lookup.
+  const db = store.load();
+  db.prompts.push({ id: "no-title", content: "hand-written" });
+  store.save(db);
+  assert.equal(store.getPrompt("real one").id, p.id);
+  assert.equal(store.getPrompt("nothing like this"), null);
+});
+
 test("addPrompt requires title and content", () => {
   assert.throws(() => store.addPrompt({ title: "", content: "x" }));
   assert.throws(() => store.addPrompt({ title: "x", content: "" }));
