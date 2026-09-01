@@ -8,6 +8,17 @@ const { RAW_DIR, ensureDir, fetchText, mapLimit, log } = require("./lib");
 
 const DOWNLOAD_CONCURRENCY = 8;
 
+// File lists come from the GitHub API, so they are outside input: a path must
+// stay inside the source's own cache directory before anything is written.
+function isSafeRelativePath(filePath) {
+  if (typeof filePath !== "string" || !filePath) return false;
+  if (path.isAbsolute(filePath)) return false;
+  return !path
+    .normalize(filePath)
+    .split(path.sep)
+    .includes("..");
+}
+
 async function listFiles(source) {
   if (source.list.type === "static") return source.list.paths;
 
@@ -19,9 +30,17 @@ async function listFiles(source) {
   return tree.tree.map((n) => n.path).filter(source.list.match);
 }
 
+function safeFiles(source, files) {
+  const safe = files.filter(isSafeRelativePath);
+  if (safe.length !== files.length) {
+    log(`  ${source.id}: skipped ${files.length - safe.length} file(s) with an unsafe path`);
+  }
+  return safe;
+}
+
 async function fetchSource(source, { force }) {
   const dir = path.join(RAW_DIR, source.id);
-  const files = await listFiles(source);
+  const files = safeFiles(source, await listFiles(source));
   let downloaded = 0;
   let cached = 0;
 
@@ -59,4 +78,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { fetchSource, listFiles };
+module.exports = { fetchSource, listFiles, isSafeRelativePath };
