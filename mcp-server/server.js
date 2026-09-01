@@ -21,15 +21,19 @@ async function main() {
     version: "1.0.0",
   });
 
-  const promptSummary = (p) => ({
-    id: p.id,
-    title: p.title,
-    tags: p.tags || [],
-    favorite: !!p.favorite,
-    variables: store.extractVariables(p.content),
-    preview:
-      p.content.length > 160 ? p.content.slice(0, 160) + "…" : p.content,
-  });
+  // The data file is editable by hand, so a prompt may be missing a field.
+  // One such entry must not break the tool for the whole library.
+  const promptSummary = (p) => {
+    const content = String(p.content || "");
+    return {
+      id: p.id,
+      title: String(p.title || ""),
+      tags: p.tags || [],
+      favorite: !!p.favorite,
+      variables: store.extractVariables(content),
+      preview: content.length > 160 ? content.slice(0, 160) + "…" : content,
+    };
+  };
 
   const asText = (obj) => ({
     content: [{ type: "text", text: JSON.stringify(obj, null, 2) }],

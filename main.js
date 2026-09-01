@@ -137,19 +137,24 @@ function createTray() {
       .listPrompts()
       .filter((p) => p.favorite)
       .slice(0, 10);
-    const favItems = favorites.map((p) => ({
-      label: p.title.length > 40 ? p.title.slice(0, 40) + "…" : p.title,
-      click: () => {
-        const vars = store.extractVariables(p.content);
-        if (vars.length) {
-          showPalette(); // needs variable input — open palette
-        } else {
-          clipboard.writeText(p.content);
-          store.bumpUsage(p.id);
-          broadcastRefresh();
-        }
-      },
-    }));
+    const favItems = favorites.map((p) => {
+      // A hand-edited entry may have no title; fall back to its body so the
+      // menu still builds instead of taking the whole tray down.
+      const label = String(p.title || p.content || "").trim();
+      return {
+        label: label.length > 40 ? label.slice(0, 40) + "…" : label,
+        click: () => {
+          const vars = store.extractVariables(p.content);
+          if (vars.length) {
+            showPalette(); // needs variable input — open palette
+          } else {
+            clipboard.writeText(p.content);
+            store.bumpUsage(p.id);
+            broadcastRefresh();
+          }
+        },
+      };
+    });
     const menu = Menu.buildFromTemplate([
       { label: t.open, click: () => createMainWindow() },
       { label: t.palette, click: () => showPalette() },

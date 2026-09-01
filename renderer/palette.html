@@ -151,7 +151,7 @@ function render() {
   $("results").innerHTML = filtered.map((p, i) => `
     <div class="row ${i===sel?'sel':''}" data-i="${i}">
       <div class="t">${p.favorite?'<span class="star">★</span>':''}${esc(p.title)}</div>
-      <div class="p">${esc(p.content.replace(/\n/g,' '))}</div>
+      <div class="p">${esc(String(p.content || "").replace(/\n/g,' '))}</div>
     </div>`).join("");
   const el = $("results").querySelector(".row.sel");
   if (el) el.scrollIntoView({ block: "nearest" });

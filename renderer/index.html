@@ -570,8 +570,8 @@ function selectPrompt(id) {
   selectedId = id;
   dirty = false;
   const p = prompts.find(x => x.id === id);
-  $("title").value = p ? p.title : "";
-  $("content").value = p ? p.content : "";
+  $("title").value = p ? String(p.title || "") : "";
+  $("content").value = p ? String(p.content || "") : "";
   $("tags").value = p ? (p.tags||[]).join(", ") : "";
   $("favBtn").textContent = p && p.favorite ? "★" : "☆";
   $("favBtn").classList.toggle("fav", !!(p && p.favorite));
