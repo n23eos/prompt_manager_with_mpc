@@ -11,7 +11,8 @@
     "start": "electron .",
     "test": "node --test",
     "build:app": "electron-builder --mac",
-    "mcp": "node mcp-server/server.js"
+    "mcp": "node mcp-server/server.js",
+    "ingest": "node scripts/ingest/run.js"
   },
   "keywords": [
     "prompt",

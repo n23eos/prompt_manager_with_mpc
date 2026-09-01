@@ -328,6 +328,82 @@ function setPromptProjects(promptId, projectIds) {
   return updatePrompt(promptId, { projectIds: (projectIds || []).map(String) });
 }
 
+// ---------- Batch import ----------
+// Imported libraries are deduplicated by a hash of the prompt body with
+// whitespace and case normalized away, so the same prompt coming from two
+// sources (or from a re-run of the importer) is only stored once.
+function normalizeForHash(content) {
+  return String(content || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function contentHash(content) {
+  return crypto
+    .createHash("sha256")
+    .update(normalizeForHash(content))
+    .digest("hex");
+}
+
+// Insert many prompts in a single load-modify-save pass. Entries whose body
+// already exists (in the database or earlier in the same batch) are skipped.
+// Imported prompts go to the end of the list so hand-written ones stay on top.
+function addMany(entries, { collection = null } = {}) {
+  const list = Array.isArray(entries) ? entries : [];
+  for (const e of list) {
+    if (!e || !e.title || !e.content) {
+      throw new Error("addMany: every entry needs a title and content");
+    }
+  }
+  return mutate((db) => {
+    const seen = new Set(
+      db.prompts.map((p) => p.contentHash || contentHash(p.content))
+    );
+    const now = new Date().toISOString();
+    const fresh = [];
+    let skipped = 0;
+
+    for (const e of list) {
+      const hash = contentHash(e.content);
+      if (seen.has(hash)) {
+        skipped++;
+        continue;
+      }
+      seen.add(hash);
+      const prompt = {
+        id: newId(),
+        title: String(e.title),
+        content: String(e.content),
+        tags: (e.tags || []).map(String),
+        favorite: Boolean(e.favorite),
+        usageCount: 0,
+        contentHash: hash,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const col = e.collection || collection;
+      if (col) prompt.collection = String(col);
+      if (e.lang) prompt.lang = String(e.lang);
+      if (e.source) prompt.source = e.source;
+      if (e.quality) prompt.quality = e.quality;
+      fresh.push(prompt);
+    }
+
+    db.prompts.push(...fresh);
+    return { added: fresh.length, skipped };
+  });
+}
+
+// Drop a whole imported collection in one go — the undo button for an import.
+function removeCollection(name) {
+  return mutate((db) => {
+    const before = db.prompts.length;
+    db.prompts = db.prompts.filter((p) => p.collection !== name);
+    return before - db.prompts.length;
+  });
+}
+
 module.exports = {
   DATA_DIR,
   DATA_FILE,
@@ -348,6 +424,9 @@ module.exports = {
   deletePrompt,
   bumpUsage,
   seedIfEmpty,
+  contentHash,
+  addMany,
+  removeCollection,
   allTags,
   extractVariables,
   renderTemplate,

@@ -47,6 +47,55 @@ Everything lives in one human-readable file:
 
 Back it up, edit by hand, or symlink into iCloud Drive / a git repo to sync. Set the `PROMPT_MANAGER_DIR` env var to change the location (both the app and the MCP server respect it). Writes are atomic and protected by a cross-process lock, so the app and agents can safely edit the library at the same time.
 
+## Importing public prompt libraries
+
+`npm run ingest` builds a large starter library from permissively licensed public
+sources — [awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompts) (CC0),
+[Fabric](https://github.com/danielmiessler/fabric) patterns (MIT) and
+[Prompt Engineering Guide](https://www.promptingguide.ai) examples (MIT):
+
+```bash
+npm run ingest
+```
+
+The pipeline runs in six stages, each cached so re-runs are cheap:
+
+| Stage | What it does |
+|-------|--------------|
+| fetch | downloads source files into `.cache/ingest/raw/` |
+| parse | one parser per source turns files into candidate prompts |
+| dedupe | drops exact duplicates and reworded near-duplicates |
+| filter | rule checks, then an LLM judge scores 1-5 and keeps the top grade |
+| enrich | detects language and adds tags from a fixed vocabulary |
+| load | writes everything into the library in one pass |
+
+The LLM stages call your local `claude` CLI (`claude -p`), so they run on your normal
+Claude subscription and need no API key. Run `claude login` once if the CLI is not
+authenticated yet.
+
+Useful flags:
+
+```bash
+npm run ingest -- --min-score=4  # also import the merely-good prompts, not only the best
+npm run ingest -- --no-llm       # rules only, no scoring or tagging
+npm run ingest -- --reset        # drop the previous import and load it fresh
+npm run ingest -- --force        # re-download sources instead of using the cache
+```
+
+Scores are cached by content hash, so changing `--min-score` after a run costs nothing:
+the judge is not asked twice about the same prompt.
+
+Imported prompts are stored with `collection: "imported"`, plus the source URL and its
+license. Your own prompts are never touched, and an import can be undone completely:
+
+```bash
+node -e "console.log(require('./store').removeCollection('imported'))"
+```
+
+To add a source, describe it in `scripts/ingest/sources.js` and drop a parser next to it
+in `scripts/ingest/parsers/`. A source that fails is reported and skipped; the rest still
+import.
+
 ## MCP server (for Claude and other agents)
 
 The MCP server exposes the same database over stdio. Tools: `search_prompts`, `get_prompt`, `render_prompt` (fills variables), `add_prompt`, `update_prompt`, `list_tags`, `list_projects`.

@@ -7,6 +7,10 @@ seed-personal/
 
 # Local planning / scratch
 .plan.md
+.plan.done.md
 
 # OS noise
 .DS_Store
+
+# Ingest cache (downloaded sources, intermediate JSONL)
+.cache/
