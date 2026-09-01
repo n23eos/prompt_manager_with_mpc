@@ -1,8 +1,12 @@
 # Prompt Manager
 
-A local-first prompt manager for macOS: menu bar app, Spotlight-style quick palette, tags, favorites, projects, `{{variable}}` templates — plus an **MCP server** so Claude and other AI agents can search and use your prompts directly.
+**Prompt Manager is a local-first prompt library for macOS with a menu bar app, a Spotlight-style palette and an MCP server.** Cmd-Shift-Space opens the palette from anywhere and Enter copies a prompt to the clipboard, while prompts holding {{variable}} placeholders ask for the values in a small form first. The main window carries search, tags, favorites, projects and an editor, and settings cover language, theme and one-click copies of ready-made Claude Desktop and Claude Code configs. The bundled MCP server lets agents search, fetch, render, add and update prompts in the same library. Everything lives in one readable JSON file under ~/.prompt-manager/, with no account, cloud or telemetry, and Electron builds it into a standalone .app.
 
-All data lives in one readable JSON file on your machine. No accounts, no cloud, no telemetry.
+<div align="center">
+
+[![Star on GitHub](https://img.shields.io/github/stars/n23eos/prompt_manager_with_mpc?style=for-the-badge&logo=github&label=Star%20this%20repo&color=FFD700&labelColor=1a1a1a)](https://github.com/n23eos/prompt_manager_with_mpc)
+
+</div>
 
 ## Features
 
