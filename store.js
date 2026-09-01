@@ -67,8 +67,16 @@ function save(db) {
   ensureDir();
   // Per-process tmp name so two writers never clobber each other's tmp file.
   const tmp = DATA_FILE + ".tmp-" + process.pid;
-  fs.writeFileSync(tmp, JSON.stringify(db, null, 2), "utf8");
-  fs.renameSync(tmp, DATA_FILE);
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(db, null, 2), "utf8");
+    fs.renameSync(tmp, DATA_FILE);
+  } catch (err) {
+    // A half-written temp file would sit in the data folder forever.
+    try {
+      fs.unlinkSync(tmp);
+    } catch (_) {}
+    throw err;
+  }
 }
 
 // ---------- Cross-process write lock ----------

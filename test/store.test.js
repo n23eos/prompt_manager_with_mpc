@@ -120,6 +120,23 @@ test("corrupt data file is backed up, not destroyed", () => {
   assert.ok(backups.length >= 1);
 });
 
+test("a failed save leaves no temp file behind", () => {
+  resetDb();
+  // Park a non-empty directory where the data file goes: the temp file is
+  // written, then the rename onto it fails.
+  fs.mkdirSync(store.DATA_FILE);
+  fs.writeFileSync(path.join(store.DATA_FILE, "blocker"), "x", "utf8");
+  try {
+    assert.throws(() => store.save({ version: 1, prompts: [], projects: [] }));
+  } finally {
+    fs.rmSync(store.DATA_FILE, { recursive: true, force: true });
+  }
+  const leftovers = fs
+    .readdirSync(path.dirname(store.DATA_FILE))
+    .filter((f) => f.includes(".tmp-"));
+  assert.deepEqual(leftovers, []);
+});
+
 test("seedIfEmpty seeds an empty db and never overwrites existing data", () => {
   resetDb();
   const seed = {
