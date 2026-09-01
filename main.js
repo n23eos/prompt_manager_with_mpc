@@ -42,6 +42,14 @@ let tray = null;
 const TRAY_ICON_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAG0lEQVR4nGNgGAXo4P+oIdQ1ZJhp/o8FDxcAAIuvDfOzHP/VAAAAAElFTkSuQmCC";
 
+// The UI is local files only: it never navigates and never opens a window.
+// Denying both closes the usual route from injected page content to a real
+// browser window with the preload bridge attached.
+function lockDownNavigation(win) {
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event) => event.preventDefault());
+}
+
 function broadcastRefresh() {
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("data:refresh");
@@ -68,6 +76,7 @@ function createMainWindow() {
       nodeIntegration: false,
     },
   });
+  lockDownNavigation(mainWindow);
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
   mainWindow.on("closed", () => (mainWindow = null));
 }
@@ -92,6 +101,7 @@ function createPaletteWindow() {
       nodeIntegration: false,
     },
   });
+  lockDownNavigation(paletteWindow);
   paletteWindow.loadFile(path.join(__dirname, "renderer", "palette.html"));
   paletteWindow.on("blur", () => hidePalette());
 }
