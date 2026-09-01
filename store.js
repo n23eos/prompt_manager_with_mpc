@@ -93,19 +93,38 @@ function sleepSync(ms) {
 
 // A lock is stale when its owner process is dead, or (fallback, e.g. PID
 // unreadable or recycled) when the lock file hasn't been touched for a while.
-function isLockStale() {
+// Returns a token identifying the exact lock that was judged, or null when the
+// lock is live; the token is what makes removal safe (see removeStaleLock).
+function staleLockToken() {
   try {
-    const pid = parseInt(fs.readFileSync(LOCK_FILE, "utf8"), 10);
+    const body = fs.readFileSync(LOCK_FILE, "utf8");
+    const token = body + "@" + fs.statSync(LOCK_FILE).mtimeMs;
+    const pid = parseInt(body, 10);
     if (Number.isInteger(pid) && pid > 0) {
       try {
         process.kill(pid, 0); // owner alive — not stale unless very old
       } catch (err) {
-        if (err.code === "ESRCH") return true; // owner is dead
+        if (err.code === "ESRCH") return token; // owner is dead
       }
     }
-    return Date.now() - fs.statSync(LOCK_FILE).mtimeMs > LOCK_STALE_MS;
+    const age = Date.now() - fs.statSync(LOCK_FILE).mtimeMs;
+    return age > LOCK_STALE_MS ? token : null;
   } catch (_) {
-    return false; // lock disappeared or unreadable — let caller retry
+    return null; // lock disappeared or unreadable — let caller retry
+  }
+}
+
+// Only delete the very lock that was judged stale. Without this check, a
+// process that made its decision moments ago could delete the fresh lock
+// another process has since acquired, and both would think they hold it.
+function removeStaleLock(token) {
+  try {
+    const body = fs.readFileSync(LOCK_FILE, "utf8");
+    if (body + "@" + fs.statSync(LOCK_FILE).mtimeMs !== token) return false;
+    fs.unlinkSync(LOCK_FILE);
+    return true;
+  } catch (_) {
+    return false;
   }
 }
 
@@ -120,10 +139,11 @@ function acquireLock() {
       return;
     } catch (err) {
       if (err.code !== "EEXIST") throw err;
-      if (isLockStale()) {
-        try {
-          fs.unlinkSync(LOCK_FILE);
-        } catch (_) {}
+      const stale = staleLockToken();
+      if (stale) {
+        // Back off when the lock turned out to belong to someone else, so a
+        // contended retry can never become a busy loop.
+        if (!removeStaleLock(stale)) sleepSync(LOCK_RETRY_MS);
         continue;
       }
       if (Date.now() - start > LOCK_TIMEOUT_MS) {
