@@ -103,7 +103,9 @@ function createPaletteWindow() {
   });
   lockDownNavigation(paletteWindow);
   paletteWindow.loadFile(path.join(__dirname, "renderer", "palette.html"));
-  paletteWindow.on("blur", () => hidePalette());
+  // Losing focus dismisses the palette, but the focus may have moved to our
+  // own manager window — hiding the app would then take that window down too.
+  paletteWindow.on("blur", () => hidePalette({ returnFocus: false }));
 }
 
 function showPalette() {
@@ -119,11 +121,21 @@ function showPalette() {
   paletteWindow.webContents.send("data:refresh");
 }
 
-function hidePalette() {
-  if (paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()) {
-    paletteWindow.hide();
-    if (app.hide) app.hide(); // return focus to previous app on macOS
+// returnFocus: hand focus back to whatever app the user came from (macOS).
+// Right for an explicit dismiss (esc, hotkey, after a copy); wrong when the
+// palette merely lost focus to another window of this app.
+function hidePalette({ returnFocus = true } = {}) {
+  if (!(paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible())) return;
+  paletteWindow.hide();
+  if (!app.hide) return;
+  if (returnFocus) {
+    app.hide();
+    return;
   }
+  // Which window got the focus is only settled after this event.
+  setImmediate(() => {
+    if (!BrowserWindow.getFocusedWindow()) app.hide();
+  });
 }
 
 function togglePalette() {
@@ -218,7 +230,8 @@ ipcMain.handle("clipboard:copy", (e, text, promptId) => {
 });
 ipcMain.handle("palette:hide", () => hidePalette());
 ipcMain.handle("window:openMain", () => {
-  hidePalette();
+  // Focus is moving to our own window, so do not hide the app.
+  hidePalette({ returnFocus: false });
   createMainWindow();
 });
 ipcMain.handle("app:dataFile", () => store.DATA_FILE);
