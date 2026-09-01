@@ -549,7 +549,7 @@ function renderList() {
     return;
   }
   $("list").innerHTML = vis.map(p => `
-    <div class="card ${p.id===selectedId?'active':''}" data-id="${p.id}">
+    <div class="card ${p.id===selectedId?'active':''}" data-id="${esc(p.id)}">
       <div class="t">${p.favorite ? '<span class="star">★</span>' : ''}${esc(p.title)}</div>
       <div class="preview">${esc(p.content)}</div>
       <div class="meta">${(p.tags||[]).map(t=>`<span class="tagchip">${esc(t)}</span>`).join("")}</div>
@@ -563,7 +563,7 @@ function ratingHtml(p) {
   for (let i = 1; i <= 10; i++) {
     stars += `<span class="s ${i<=r?'on':''}" data-star="${i}">★</span>`;
   }
-  return `<div class="rating" data-id="${p.id}" title="Оценка / Rating">${stars}<span class="num">${r?`${r}/10`:""}</span></div>`;
+  return `<div class="rating" data-id="${esc(p.id)}" title="Оценка / Rating">${stars}<span class="num">${r?`${r}/10`:""}</span></div>`;
 }
 
 function selectPrompt(id) {
