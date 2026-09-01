@@ -58,7 +58,8 @@ sources — [awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-promp
 npm run ingest
 ```
 
-The pipeline runs in six stages, each cached so re-runs are cheap:
+The pipeline runs in six stages. Downloads and judge scores are cached, so a
+re-run only pays for what changed (the enrich stage re-tags every prompt):
 
 | Stage | What it does |
 |-------|--------------|
