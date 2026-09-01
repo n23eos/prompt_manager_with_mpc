@@ -117,8 +117,8 @@ function extractVariables(content) {
   return vars;
 }
 function renderTemplate(content, values) {
-  return content.replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g,
-    (f, n) => (n in values ? values[n] : f));
+  return String(content || "").replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g,
+    (f, n) => (Object.prototype.hasOwnProperty.call(values, n) ? values[n] : f));
 }
 function esc(s) {
   return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
@@ -129,7 +129,7 @@ async function load() {
   if (s.language !== lang) { lang = s.language || "en"; applyLang(); }
   prompts = await window.api.listPrompts();
   // favorites and most-used first
-  prompts.sort((a,b) => (b.favorite - a.favorite) || ((b.usageCount||0) - (a.usageCount||0)));
+  prompts.sort((a,b) => (!!b.favorite - !!a.favorite) || ((b.usageCount||0) - (a.usageCount||0)));
   applyFilter();
 }
 
