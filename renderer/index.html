@@ -371,6 +371,7 @@ const I18N = {
     cancel: "Cancel", copyResult: "Copy result",
     copied: "Copied!", copiedVars: "Copied with variables!", saved: "Saved",
     required: "Title and content required", confirmDel: "Delete this prompt?",
+    confirmDiscard: "This prompt has unsaved changes. Discard them?",
     empty: "No prompts found.<br>Click <b>＋ New</b> to create one.",
     projLabel: "Projects:", addToProj: "＋ Project", newProjPrompt: "New project name:",
     confirmDelProj: "Delete this project? Prompts stay, only the grouping is removed.",
@@ -397,6 +398,7 @@ const I18N = {
     cancel: "Отмена", copyResult: "Скопировать результат",
     copied: "Скопировано!", copiedVars: "Скопировано с переменными!", saved: "Сохранено",
     required: "Нужны название и текст", confirmDel: "Удалить этот промпт?",
+    confirmDiscard: "В промпте есть несохранённые изменения. Отменить их?",
     empty: "Промпты не найдены.<br>Нажми <b>＋ Новый</b>, чтобы создать.",
     projLabel: "Проекты:", addToProj: "＋ Проект", newProjPrompt: "Название нового проекта:",
     confirmDelProj: "Удалить проект? Промпты останутся, убирается только группировка.",
@@ -566,6 +568,12 @@ function ratingHtml(p) {
   return `<div class="rating" data-id="${esc(p.id)}" title="Оценка / Rating">${stars}<span class="num">${r?`${r}/10`:""}</span></div>`;
 }
 
+// Called before anything that replaces the editor's contents, so unsaved
+// edits are never dropped without asking.
+function confirmDiscard() {
+  return !dirty || confirm(t("confirmDiscard"));
+}
+
 function selectPrompt(id) {
   selectedId = id;
   dirty = false;
@@ -699,6 +707,7 @@ $("list").addEventListener("click", async e => {
     return;
   }
   const card = e.target.closest(".card"); if (!card) return;
+  if (card.dataset.id === selectedId || !confirmDiscard()) return;
   selectPrompt(card.dataset.id);
 });
 // hover preview of rating
@@ -714,6 +723,7 @@ $("list").addEventListener("mouseout", e => {
 });
 $("search").addEventListener("input", renderList);
 $("newBtn").addEventListener("click", () => {
+  if (!confirmDiscard()) return;
   selectPrompt(null);
   $("title").focus();
 });
@@ -731,6 +741,8 @@ $("deleteBtn").addEventListener("click", async () => {
 $("favBtn").addEventListener("click", async () => {
   if (!selectedId) return;
   const p = prompts.find(x => x.id === selectedId); if (!p) return;
+  // Toggling reloads the editor from the store, so ask first.
+  if (!confirmDiscard()) return;
   await window.api.updatePrompt(p.id, { favorite: !p.favorite });
   await refresh();
   selectPrompt(p.id);
