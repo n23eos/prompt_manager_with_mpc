@@ -472,8 +472,8 @@ function extractVariables(content) {
   return vars;
 }
 function renderTemplate(content, values) {
-  return content.replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g,
-    (f, n) => (n in values ? values[n] : f));
+  return String(content || "").replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g,
+    (f, n) => (Object.prototype.hasOwnProperty.call(values, n) ? values[n] : f));
 }
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.classList.add("show");
