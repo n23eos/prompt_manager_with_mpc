@@ -53,14 +53,22 @@ function sleep(ms) {
 }
 
 // Run tasks with a bounded number in flight, keeping result order.
+// The first failure stops new work from being handed out, so a fatal error
+// (an expired login, say) ends the run instead of retrying it item by item.
 async function mapLimit(items, limit, worker) {
   const results = new Array(items.length);
   let next = 0;
+  let failed = false;
   const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
     for (;;) {
       const i = next++;
-      if (i >= items.length) return;
-      results[i] = await worker(items[i], i);
+      if (i >= items.length || failed) return;
+      try {
+        results[i] = await worker(items[i], i);
+      } catch (err) {
+        failed = true;
+        throw err;
+      }
     }
   });
   await Promise.all(runners);
